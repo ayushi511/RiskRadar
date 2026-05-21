@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Disaster Alert Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<style>
+  :root {
+    --bg:       #080c14;
+    --surface:  #0d1220;
+    --surface2: #111827;
+    --border:   rgba(255,255,255,0.06);
+    --border2:  rgba(255,255,255,0.12);
+    --text:     #e8eaf0;
+    --muted:    #6b7280;
+    --green:    #22c55e;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column}
+
+  /* TOP BAR */
+  #topbar{display:flex;align-items:center;gap:8px;padding:0 16px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:nowrap;overflow-x:auto}
+  #topbar::-webkit-scrollbar{display:none}
+  .brand{display:flex;align-items:center;gap:10px;margin-right:16px;flex-shrink:0}
+  .brand-icon{width:30px;height:30px;background:linear-gradient(135deg,#ef4444,#f97316);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .brand-text{font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--text);white-space:nowrap}
+  .brand-sub{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.05em}
+  .divider{width:1px;height:24px;background:var(--border);flex-shrink:0;margin:0 4px}
+
+  .pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:12px;font-family:'Space Grotesk',sans-serif;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+  .pill:hover{border-color:var(--border2);color:var(--text)}
+  .pill.active{border-color:transparent;color:#fff}
+  .pill .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .pill .count{font-family:'JetBrains Mono',monospace;font-size:11px;opacity:.8}
+
+  .pill-all.active  {background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2)}
+  .pill-eq.active   {background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.4)}
+  .pill-fl.active   {background:rgba(59,130,246,0.2);border-color:rgba(59,130,246,0.4)}
+  .pill-wf.active   {background:rgba(245,158,11,0.2);border-color:rgba(245,158,11,0.4)}
+  .pill-cy.active   {background:rgba(168,85,247,0.2);border-color:rgba(168,85,247,0.4)}
+  .pill-vo.active   {background:rgba(249,115,22,0.2);border-color:rgba(249,115,22,0.4)}
+  .sev-all.active      {background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2)}
+  .sev-critical.active {background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.35);color:#fca5a5}
+  .sev-high.active     {background:rgba(249,115,22,0.15);border-color:rgba(249,115,22,0.35);color:#fdba74}
+  .sev-medium.active   {background:rgba(34,197,94,0.15);border-color:rgba(34,197,94,0.35);color:#86efac}
+
+  .heat-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:12px;font-family:'Space Grotesk',sans-serif;color:var(--muted);cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+  .heat-btn:hover{border-color:var(--border2);color:var(--text)}
+  .heat-btn.active{background:rgba(20,184,166,0.15);border-color:rgba(20,184,166,0.4);color:#5eead4}
+  #riskzone-btn.active{background:rgba(168,85,247,0.15);border-color:rgba(168,85,247,0.4);color:#d8b4fe}
+
+  /* STAT STRIP */
+  #statstrip{display:flex;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0}
+  .statbox{flex:1;padding:8px 14px;border-right:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .statbox:last-child{border-right:none}
+  .statbox-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+  .statbox-label{font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+  .statbox-value{font-size:18px;font-weight:600;font-family:'JetBrains Mono',monospace;line-height:1}
+
+  /* BODY */
+  #body{display:flex;flex:1;overflow:hidden}
+  #map{flex:1}
+
+  /* SIDEBAR */
+  #sidebar{width:260px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+  #sidebar-head{padding:12px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+  #sidebar-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+  #search-input{width:100%;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:'Space Grotesk',sans-serif;outline:none;transition:border .2s}
+  #search-input:focus{border-color:var(--border2)}
+  #search-input::placeholder{color:var(--muted)}
+  #feed{flex:1;overflow-y:auto}
+  #feed::-webkit-scrollbar{width:3px}
+  #feed::-webkit-scrollbar-thumb{background:#1f2937;border-radius:2px}
+  .alert-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;display:flex;gap:10px;align-items:flex-start}
+  .alert-item:hover{background:var(--surface2)}
+  .alert-type-badge{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
+  .alert-content{flex:1;min-width:0}
+  .alert-title{font-size:12px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .alert-meta{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+  .sev-badge{padding:1px 6px;border-radius:4px;font-size:10px;font-weight:500;font-family:'JetBrains Mono',monospace}
+
+  /* BOTTOM BAR */
+  #bottombar{padding:6px 16px;background:var(--surface);border-top:1px solid var(--border);font-size:10px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;font-family:'JetBrains Mono',monospace;letter-spacing:.03em}
+  .live-indicator{display:flex;align-items:center;gap:6px}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:livepulse 2s infinite}
+  @keyframes livepulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{opacity:.7;box-shadow:0 0 0 4px rgba(34,197,94,0)}}
+
+  /* LEAFLET */
+  .leaflet-popup-content-wrapper{background:#0d1220!important;color:var(--text)!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:10px!important;box-shadow:0 8px 32px rgba(0,0,0,.6)!important;font-family:'Space Grotesk',sans-serif!important}
+  .leaflet-popup-content{margin:14px 16px!important}
+  .leaflet-popup-tip{background:#0d1220!important}
+  .leaflet-popup-close-button{color:var(--muted)!important;font-size:16px!important;top:8px!important;right:10px!important}
+  .popup-type{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;font-family:'JetBrains Mono',monospace}
+  .popup-title{font-size:13px;font-weight:600;margin-bottom:8px;line-height:1.35;color:var(--text)}
+  .popup-row{display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap}
+  .popup-sev{display:inline-block;font-size:10px;padding:2px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-weight:500}
+  .popup-mag{font-size:11px;color:var(--muted)}
+  .popup-link{display:block;margin-top:10px;font-size:11px;color:#60a5fa;text-decoration:none;padding:5px 10px;border:1px solid rgba(96,165,250,.2);border-radius:6px;text-align:center;transition:background .15s}
+  .popup-link:hover{background:rgba(96,165,250,.1)}
+  .popup-types{font-size:11px;color:#9ca3af;margin-top:8px;line-height:1.6}
+  .leaflet-control-zoom{border:1px solid var(--border)!important;border-radius:8px!important;overflow:hidden}
+  .leaflet-control-zoom a{background:var(--surface)!important;color:var(--text)!important;border-bottom:1px solid var(--border)!important}
+  .leaflet-control-zoom a:hover{background:var(--surface2)!important}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="brand">
+    <div class="brand-icon">🌍</div>
+    <div>
+      <div class="brand-text">DisasterWatch</div>
+      <div class="brand-sub">LIVE · GLOBAL</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="pill pill-all active" data-type="all"><span>All</span><span class="count" id="cnt-all">—</span></div>
+  <div class="pill pill-eq" data-type="earthquake"><div class="dot" style="background:#ef4444"></div>Quakes<span class="count" id="cnt-earthquake">—</span></div>
+  <div class="pill pill-fl" data-type="flood"><div class="dot" style="background:#3b82f6"></div>Floods<span class="count" id="cnt-flood">—</span></div>
+  <div class="pill pill-wf" data-type="wildfire"><div class="dot" style="background:#f59e0b"></div>Fires<span class="count" id="cnt-wildfire">—</span></div>
+  <div class="pill pill-cy" data-type="cyclone"><div class="dot" style="background:#a855f7"></div>Cyclones<span class="count" id="cnt-cyclone">—</span></div>
+  <div class="pill pill-vo" data-type="volcano"><div class="dot" style="background:#f97316"></div>Volcanoes<span class="count" id="cnt-volcano">—</span></div>
+
+  <div class="divider"></div>
+
+  <div class="pill sev-all active" data-sev="all">All sev.</div>
+  <div class="pill sev-critical" data-sev="critical"><div class="dot" style="background:#ef4444"></div>Critical</div>
+  <div class="pill sev-high" data-sev="high"><div class="dot" style="background:#f97316"></div>High</div>
+  <div class="pill sev-medium" data-sev="medium"><div class="dot" style="background:#22c55e"></div>Medium</div>
+
+  <div class="divider"></div>
+
+  <button class="heat-btn" id="heatmap-btn" onclick="toggleHeatmap()">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    Heatmap
+  </button>
+
+  <button class="heat-btn" id="riskzone-btn" onclick="toggleRiskZones()">
+    🧠 Risk Zones
+  </button>
+</div>
+
+<div id="statstrip">
+  <div class="statbox">
+    <div class="statbox-icon" style="background:rgba(239,68,68,0.12)">🌐</div>
+    <div><div class="statbox-label">Total Events</div><div class="statbox-value" id="stat-total" style="color:#e8eaf0">—</div></div>
+  </div>
+  <div class="statbox">
+    <div class="statbox-icon" style="background:rgba(239,68,68,0.12)">⚠️</div>
+    <div><div class="statbox-label">Critical</div><div class="statbox-value" id="stat-critical" style="color:#ef4444">—</div></div>
+  </div>
+  <div class="statbox">
+    <div class="statbox-icon" style="background:rgba(59,130,246,0.12)">🌊</div>
+    <div><div class="statbox-label">Floods</div><div class="statbox-value" id="stat-floods" style="color:#3b82f6">—</div></div>
+  </div>
+  <div class="statbox">
+    <div class="statbox-icon" style="background:rgba(245,158,11,0.12)">🔥</div>
+    <div><div class="statbox-label">Wildfires</div><div class="statbox-value" id="stat-fires" style="color:#f59e0b">—</div></div>
+  </div>
+  <div class="statbox">
+    <div class="statbox-icon" style="background:rgba(168,85,247,0.12)">🌀</div>
+    <div><div class="statbox-label">Cyclones</div><div class="statbox-value" id="stat-cyclones" style="color:#a855f7">—</div></div>
+  </div>
+</div>
+
+<div id="body">
+  <div id="map"></div>
+  <div id="sidebar">
+    <div id="sidebar-head">
+      <div id="sidebar-title">Live Alert Feed</div>
+      <input id="search-input" type="text" placeholder="Search alerts..." oninput="onSearch(this.value)"/>
+    </div>
+    <div id="feed"></div>
+  </div>
+</div>
+
+<div id="bottombar">
+  <div class="live-indicator">
+    <div class="live-dot"></div>
+    <span id="last-updated">Connecting...</span>
+  </div>
+  <span id="total-count"></span>
+</div>
+
+<script>
+const TYPE_COLORS = {
+  earthquake:'#ef4444',flood:'#3b82f6',wildfire:'#f59e0b',
+  cyclone:'#a855f7',volcano:'#f97316',other:'#6b7280'
+};
+const TYPE_EMOJI = {
+  earthquake:'🔴',flood:'🔵',wildfire:'🟠',cyclone:'🟣',volcano:'🟤',other:'⚪'
+};
+const SEV_COLORS = {
+  critical:'#ef4444',red:'#ef4444',
+  high:'#f97316',orange:'#f97316',
+  medium:'#22c55e',green:'#22c55e',
+  low:'#4b5563'
+};
+const SEV_BG = {
+  critical:'rgba(239,68,68,0.15)',red:'rgba(239,68,68,0.15)',
+  high:'rgba(249,115,22,0.15)',orange:'rgba(249,115,22,0.15)',
+  medium:'rgba(34,197,94,0.15)',green:'rgba(34,197,94,0.15)',
+  low:'rgba(75,85,99,0.15)'
+};
+const SEV_WEIGHT = {
+  critical:1.0,red:1.0,high:0.7,orange:0.7,medium:0.4,green:0.4,low:0.2
+};
+
+let allAlerts=[],activeFilter='all',activeSev='all',searchQuery='';
+let markerLayer,heatLayer,heatmapOn=false;
+let riskZonesOn=false,riskLayer;
+
+const map=L.map('map',{zoomControl:true,attributionControl:false}).setView([20,10],2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18,subdomains:'abcd'}).addTo(map);
+markerLayer=L.layerGroup().addTo(map);
+riskLayer=L.layerGroup().addTo(map);
+
+function makeIcon(type,sev){
+  const c=TYPE_COLORS[type]||TYPE_COLORS.other;
+  const r=(sev==='critical'||sev==='red')?11:(sev==='high'||sev==='orange')?8:5;
+  const glow=(sev==='critical'||sev==='red')?`<circle cx='${r+4}' cy='${r+4}' r='${r+3}' fill='${c}' fill-opacity='0.15'/>`:'';
+  const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='${(r+4)*2}' height='${(r+4)*2}'>${glow}<circle cx='${r+4}' cy='${r+4}' r='${r}' fill='${c}' fill-opacity='0.9' stroke='rgba(255,255,255,0.3)' stroke-width='1.5'/></svg>`;
+  return L.divIcon({html:`<img src="data:image/svg+xml,${encodeURIComponent(svg)}"/>`,className:'',iconSize:[(r+4)*2,(r+4)*2],iconAnchor:[r+4,r+4]});
+}
+
+function sevLabel(s){
+  if(s==='critical'||s==='red') return 'Critical';
+  if(s==='high'||s==='orange')  return 'High';
+  if(s==='medium'||s==='green') return 'Medium';
+  return 'Low';
+}
+function sevNorm(s){
+  return {red:'critical',orange:'high',green:'medium'}[s]||s||'low';
+}
+
+function getFiltered(){
+  return allAlerts.filter(a=>{
+    const typeOk=activeFilter==='all'||a.type===activeFilter;
+    const sevOk=activeSev==='all'||sevNorm(a.severity)===activeSev;
+    const srchOk=!searchQuery||a.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return typeOk&&sevOk&&srchOk;
+  });
+}
+
+function renderMarkers(alerts){
+  markerLayer.clearLayers();
+  if(heatmapOn) return;
+  alerts.forEach(a=>{
+    if(!a.lat||!a.lng) return;
+    const m=L.marker([a.lat,a.lng],{icon:makeIcon(a.type,a.severity)});
+    const sc=SEV_COLORS[a.severity]||'#6b7280';
+    const sbg=SEV_BG[a.severity]||'rgba(75,85,99,0.15)';
+    const mag=a.magnitude?`<div class='popup-mag'>Mag ${a.magnitude.toFixed(1)}</div>`:'';
+    const link=a.url?`<a class='popup-link' href='${a.url}' target='_blank'>View on GDACS / USGS →</a>`:'';
+    m.bindPopup(`
+      <div class='popup-type'>${a.type}</div>
+      <div class='popup-title'>${a.title}</div>
+      <div class='popup-row'>
+        <span class='popup-sev' style='background:${sbg};color:${sc}'>${sevLabel(a.severity)}</span>
+        ${mag}
+      </div>${link}`,{maxWidth:240});
+    markerLayer.addLayer(m);
+  });
+}
+
+function renderHeatmap(alerts){
+  if(heatLayer){map.removeLayer(heatLayer);heatLayer=null;}
+  if(!heatmapOn) return;
+  const pts=alerts.filter(a=>a.lat&&a.lng).map(a=>[a.lat,a.lng,SEV_WEIGHT[a.severity]||SEV_WEIGHT[sevNorm(a.severity)]||0.3]);
+  heatLayer=L.heatLayer(pts,{radius:35,blur:25,maxZoom:8,gradient:{0.2:'#1d4ed8',0.45:'#16a34a',0.65:'#d97706',0.85:'#dc2626',1.0:'#fff'}}).addTo(map);
+}
+
+function render(){
+  const filtered=getFiltered();
+  renderMarkers(filtered);
+  renderHeatmap(filtered);
+  renderFeed(filtered);
+  document.getElementById('total-count').textContent=`Showing ${filtered.length} of ${allAlerts.length}`;
+}
+
+/* ── HEATMAP TOGGLE ── */
+window.toggleHeatmap=function(){
+  heatmapOn=!heatmapOn;
+  document.getElementById('heatmap-btn').classList.toggle('active',heatmapOn);
+  render();
+};
+
+/* ── RISK ZONES TOGGLE ── */
+window.toggleRiskZones=async function(){
+  riskZonesOn=!riskZonesOn;
+  document.getElementById('riskzone-btn').classList.toggle('active',riskZonesOn);
+  riskLayer.clearLayers();
+  if(!riskZonesOn) return;
+
+  try{
+    const res=await fetch('https://riskradar-il8q.onrender.com/api/risk-zones');
+    const data=await res.json();
+    const zones=data.zones||[];
+
+    if(zones.length===0){
+      console.warn('No risk zones returned — check your backend /api/risk-zones');
+      return;
+    }
+
+    zones.forEach(z=>{
+      if(!z.lat||!z.lng) return;
+
+      /* outer glow */
+      L.circle([z.lat,z.lng],{
+        radius:z.radius_km*1000,
+        color:z.color,fillColor:z.color,
+        fillOpacity:0.06,weight:0.8,opacity:0.25
+      }).addTo(riskLayer);
+
+      /* inner zone */
+      const inner=L.circle([z.lat,z.lng],{
+        radius:z.radius_km*400,
+        color:z.color,fillColor:z.color,
+        fillOpacity:0.18,weight:1.5,opacity:0.7
+      });
+
+      const typeList=(z.types||[]).map(t=>`<span style='color:${TYPE_COLORS[t]||"#888"}'>${t}</span>`).join(' · ');
+      inner.bindPopup(`
+        <div class='popup-type'>🧠 AI RISK ZONE</div>
+        <div class='popup-title'>${z.risk_level.toUpperCase()} RISK AREA</div>
+        <div class='popup-row'>
+          <span class='popup-sev' style='background:${z.color}22;color:${z.color}'>Score ${z.score}/100</span>
+          <span class='popup-mag'>${z.count} event${z.count>1?'s':''}</span>
+        </div>
+        <div class='popup-types'><b style='color:#e8eaf0'>Active types:</b><br/>${typeList}</div>
+      `,{maxWidth:230});
+
+      riskLayer.addLayer(inner);
+    });
+
+  } catch(e){
+    console.error('Risk zones fetch failed:',e);
+    alert('Could not load risk zones. Make sure backend is running on :8000');
+  }
+};
+
+window.onSearch=function(v){searchQuery=v;render();};
+
+function renderFeed(alerts){
+  document.getElementById('feed').innerHTML=alerts.slice(0,100).map(a=>{
+    const c=TYPE_COLORS[a.type]||'#6b7280';
+    const sc=SEV_COLORS[a.severity]||'#6b7280';
+    const sbg=SEV_BG[a.severity]||'rgba(75,85,99,0.15)';
+    const em=TYPE_EMOJI[a.type]||'⚪';
+    const lat=a.lat||0,lng=a.lng||0;
+    return `<div class='alert-item' onclick="map.flyTo([${lat},${lng}],5,{duration:1.2})">
+      <div class='alert-type-badge' style='background:${c}18'>${em}</div>
+      <div class='alert-content'>
+        <div class='alert-title'>${a.title}</div>
+        <div class='alert-meta'>
+          <span class='sev-badge' style='background:${sbg};color:${sc}'>${sevLabel(a.severity)}</span>
+          <span style='color:${c}'>${a.type}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateStats(alerts){
+  document.getElementById('cnt-all').textContent        =alerts.length;
+  document.getElementById('cnt-earthquake').textContent =alerts.filter(a=>a.type==='earthquake').length;
+  document.getElementById('cnt-flood').textContent      =alerts.filter(a=>a.type==='flood').length;
+  document.getElementById('cnt-wildfire').textContent   =alerts.filter(a=>a.type==='wildfire').length;
+  document.getElementById('cnt-cyclone').textContent    =alerts.filter(a=>a.type==='cyclone').length;
+  document.getElementById('cnt-volcano').textContent    =alerts.filter(a=>a.type==='volcano').length;
+  document.getElementById('stat-total').textContent     =alerts.length;
+  document.getElementById('stat-critical').textContent  =alerts.filter(a=>sevNorm(a.severity)==='critical').length;
+  document.getElementById('stat-floods').textContent    =alerts.filter(a=>a.type==='flood').length;
+  document.getElementById('stat-fires').textContent     =alerts.filter(a=>a.type==='wildfire').length;
+  document.getElementById('stat-cyclones').textContent  =alerts.filter(a=>a.type==='cyclone').length;
+}
+
+document.querySelectorAll('.pill[data-type]').forEach(el=>
+  el.addEventListener('click',()=>{
+    activeFilter=el.dataset.type;
+    document.querySelectorAll('.pill[data-type]').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    render();
+  })
+);
+document.querySelectorAll('.pill[data-sev]').forEach(el=>
+  el.addEventListener('click',()=>{
+    activeSev=el.dataset.sev;
+    document.querySelectorAll('.pill[data-sev]').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    render();
+  })
+);
+
+async function fetchData(){
+  try{
+    const res=await fetch('https://riskradar-il8q.onrender.com/api/alerts');
+    const data=await res.json();
+    allAlerts=data.alerts||[];
+    const d=new Date(data.last_updated);
+    document.getElementById('last-updated').textContent='Last updated '+d.toLocaleTimeString();
+    updateStats(allAlerts);
+    render();
+  } catch(e){
+    document.getElementById('last-updated').textContent='Backend offline — run uvicorn on :8000';
+    document.querySelector('.live-dot').style.background='#ef4444';
+  }
+}
+
+fetchData();
+setInterval(fetchData,60000);
+</script>
+</body>
+</html>
