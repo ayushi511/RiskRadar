@@ -301,7 +301,7 @@ window.toggleRiskZones=async function(){
   if(!riskZonesOn) return;
 
   try{
-    const res=await fetch('http://localhost:8000/api/risk-zones');
+    const res=await fetch('https://riskradar-il8q.onrender.com/api/risk-zones');
     const data=await res.json();
     const zones=data.zones||[];
 
@@ -402,7 +402,7 @@ document.querySelectorAll('.pill[data-sev]').forEach(el=>
 
 async function fetchData(){
   try{
-    const res=await fetch('http://localhost:8000/api/alerts');
+    const res=await fetch('https://riskradar-il8q.onrender.com/api/alerts');
     const data=await res.json();
     allAlerts=data.alerts||[];
     const d=new Date(data.last_updated);
