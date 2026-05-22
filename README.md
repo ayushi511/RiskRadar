@@ -1,28 +1,62 @@
-# 🌍 RiskRadar — AI-Powered Disaster Monitoring System
+# 🌍 RiskRadar — AI-Powered Disaster Monitoring Platform
 
-A full-stack disaster prediction and monitoring platform that combines real-time disaster alerts with machine learning to predict high-risk zones globally.
+RiskRadar is a full-stack disaster monitoring and prediction platform that combines real-time disaster alerts with machine learning-based geospatial risk analysis.
 
 ## 🚀 Features
 
-- 🗺️ **Live Global Map** — Real-time disaster markers (earthquakes, floods, wildfires, cyclones, volcanoes)
-- 🧠 **AI Risk Zones** — ML model predicts historically high-risk regions based on 6 years of data
-- 🔥 **Heatmap Mode** — Density visualization of disaster activity
-- 📡 **Auto-refresh** — Live alerts updated every 5 minutes
-- 🔍 **Filter & Search** — Filter by disaster type and severity
+* 🗺️ Live global disaster monitoring with interactive maps
+* 🌋 Real-time disaster alerts including earthquakes, floods, cyclones, wildfires, and volcanoes
+* 🤖 AI-powered risk prediction using historical disaster data
+* 🔥 Heatmap visualization for disaster density analysis
+* 📡 Auto-refresh system updating alerts every 5 minutes
+* 🔍 Disaster filtering and searchable live alerts
+* 📊 Analytics dashboard with:
+
+  * Disaster distribution charts
+  * Weekly trend analysis
+  * Severity breakdown
+  * Critical alert monitoring
+  * Most affected regions
+* ✨ Modern UI with glassmorphism cards and responsive design
+
+---
 
 ## 🛠️ Tech Stack
 
-**Backend:** Python, FastAPI, APScheduler, scikit-learn, GDACS API, USGS API
+### Backend
 
-**Frontend:** HTML, CSS, JavaScript, Leaflet.js
+* Python
+* FastAPI
+* APScheduler
+* scikit-learn
+* GDACS API
+* USGS API
 
-## 📊 ML Model
+### Frontend
 
-- Trained on 6 years of real GDACS historical data
-- 85% test accuracy, 77% cross-validation accuracy
-- Predicts Low / High / Critical risk per global region
+* HTML
+* CSS
+* JavaScript
+* Leaflet.js
+
+### Deployment
+
+* Frontend: Vercel
+* Backend: Render
+
+---
+
+## 📊 Machine Learning
+
+* Trained on 6 years of historical GDACS disaster data
+* Achieved 85% test accuracy and 77% cross-validation accuracy
+* Predicts Low / High / Critical risk levels for global regions
+
+---
 
 ## ⚙️ Setup
+
+### Backend
 
 ```bash
 cd backend
@@ -32,6 +66,30 @@ pip install fastapi uvicorn apscheduler requests pandas scikit-learn joblib nump
 python -m uvicorn main:app --reload
 ```
 
-Train the model: GET http://localhost:8000/api/ml/train
+### Train ML Model
 
-Open frontend/public/map.html in browser
+```bash
+GET http://localhost:8000/api/ml/train
+```
+
+### Frontend
+
+Open:
+
+```bash
+frontend/public/map.html
+```
+
+in your browser.
+
+---
+
+## 🌐 Live Demo
+
+Frontend: https://risk-radar-xrj3.vercel.app/
+
+---
+
+## 👩‍💻 Author
+
+Ayushi Srivastava
