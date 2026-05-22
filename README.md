@@ -51,8 +51,25 @@ RiskRadar is a full-stack disaster monitoring and prediction platform that combi
 * Trained on 6 years of historical GDACS disaster data
 * Achieved 85% test accuracy and 77% cross-validation accuracy
 * Predicts Low / High / Critical risk levels for global regions
+  
+---
+
+## 🌲 Why Random Forest?
+
+Random Forest was selected because it handled noisy environmental data better and reduced overfitting compared to Decision Trees.
 
 ---
+
+## ⚠️ Challenges Faced
+
+- Severe class imbalance in disaster categories
+- Sparse critical-risk training samples
+- Confidence filtering suppressing high-risk predictions
+- Maintaining realistic model performance without overfitting
+- Integrating live disaster APIs with ML predictions
+- Vague recall and precision values due to class imbalance
+- Smaller dataset leading to imbalance of critical risks 
+
 
 ## ⚙️ Setup
 
